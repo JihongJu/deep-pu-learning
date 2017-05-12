@@ -5,6 +5,7 @@ From fchollet/keras/keras/examples/cifar10_cnn.py
 
 from __future__ import print_function
 import keras
+import requests
 import argparse
 import datetime
 import numpy as np
@@ -18,10 +19,18 @@ from model import cnn
 
 parser = argparse.ArgumentParser(description='Continue a training.')
 parser.add_argument('-t', help='The title of the training to continue')
+parser.add_argument('--pct_missing', default=0.,
+        help='Percentage of mising "positives"')
 args = parser.parse_args()
 
 if args.t:
     title = args.t
+else:
+    r = requests.get('https://frightanic.com/goodies_content/docker-names.php')
+    if r.raise_for_status():
+        raise
+    title = r.text.rstrip()
+pct_missing = args.pct_missing
 batch_size = 32
 num_classes = 11  # 0: negatives and 1-10: cifar10 classes
 epochs = 200
@@ -50,6 +59,12 @@ x_train = np.concatenate((px_train, ux_train), axis=0)
 y_train = np.concatenate((py_train, uy_train), axis=0)
 x_test = np.concatenate((px_test, ux_test), axis=0)
 y_test = np.concatenate((py_test, uy_test), axis=0)
+# Construct artificial U set
+np.random.seed(42)
+num_samples = y_train.shape[0]
+miss = np.random.rand(num_samples) < pct_missing
+y_train[(y_train != 0) & (miss)] = 0
+np.random.seed(None)
 
 # Convert class vectors to binary class matrices.
 y_train = keras.utils.to_categorical(y_train, num_classes)
