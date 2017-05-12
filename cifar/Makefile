@@ -6,7 +6,7 @@ VERSION ?= latest
 DOCKER=nvidia-docker
 
 VOLUMES = -v `pwd`:/root/workspace \
-	-v ${HOME}/Datasets:/root/workspace/data
+	-v ${HOME}/Datasets:/root/.keras/datasets
 ENV = -e KERAS_BACKEND=tensorflow
 
 

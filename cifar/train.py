@@ -7,20 +7,23 @@ from __future__ import print_function
 import keras
 import requests
 import argparse
-import datetime
 import numpy as np
 from keras.datasets import cifar10, cifar100
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import (
+    ReduceLROnPlateau,
     CSVLogger,
     EarlyStopping,
     ModelCheckpoint)
 from model import cnn
+from wide_resnet import WideResidualNetwork
 
 parser = argparse.ArgumentParser(description='Continue a training.')
 parser.add_argument('-t', help='The title of the training to continue')
+parser.add_argument('--net', default='cnn',
+                    help='Model to use: either cnn or wide_resnet')
 parser.add_argument('--pct_missing', default=0.,
-        help='Percentage of mising "positives"')
+                    help='Percentage of mising "positives"')
 args = parser.parse_args()
 
 if args.t:
@@ -31,6 +34,7 @@ else:
         raise
     title = r.text.rstrip()
 pct_missing = args.pct_missing
+net = args.net
 batch_size = 32
 num_classes = 11  # 0: negatives and 1-10: cifar10 classes
 epochs = 200
@@ -70,11 +74,15 @@ np.random.seed(None)
 y_train = keras.utils.to_categorical(y_train, num_classes)
 y_test = keras.utils.to_categorical(y_test, num_classes)
 
+if net.lower() == 'cnn':
+    model = cnn(input_shape=x_train.shape[1:], num_classes=num_classes)
+    # initiate RMSprop optimizer
+    opt = 'adam'
+    # opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
+else:
+    opt = 'adam'
+    model = WideResidualNetwork(classes=11, include_top=True, weights=None)
 
-model = cnn(input_shape=x_train.shape[1:], num_classes=num_classes)
-
-# initiate RMSprop optimizer
-opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
 
 # Let's train the model using RMSprop
 model.compile(loss='categorical_crossentropy',
@@ -97,17 +105,22 @@ x_test = normalize(x_test)
 
 # Checkpoint
 checkpointer = ModelCheckpoint(
-    filepath="model_checkpoint_{}.h5".format(title),
+    filepath="model_checkpoint_{}_{}.h5".format(pct_missing, title),
     verbose=1,
     save_best_only=True)
 
 # csvlogger
 csv_logger = CSVLogger(
-    'csv_logger_{}.csv'.format(datetime.datetime.now().isoformat(), title))
+    'csv_logger_{}_{}.csv'.format(pct_missing, title))
 # EarlyStopping
 early_stopper = EarlyStopping(monitor='val_loss',
                               min_delta=0.001,
                               patience=50)
+# Reduce lr on plateau
+lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                               cooldown=0,
+                               patience=5,
+                               min_lr=0.5e-6)
 
 if not data_augmentation:
     print('Not using data augmentation.')
