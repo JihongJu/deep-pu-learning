@@ -8,7 +8,7 @@ import keras
 import requests
 import argparse
 import numpy as np
-from keras.datasets import cifar10, cifar100
+from keras.datasets import cifar10
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import (
     ReduceLROnPlateau,
@@ -35,49 +35,15 @@ else:
     if r.raise_for_status():
         raise
     title = r.text.rstrip()
-pct_missing = float(args.pct_missing)
+pct_missing = args.pct_missing
 net = args.net
 batch_size = 64
-num_classes = 11  # 0: negatives and 1-10: cifar10 classes
+num_classes = 10
 epochs = 100
 data_augmentation = True
 
 # Import cifar10 data as P set
-(px_train, py_train), (px_test, py_test) = cifar10.load_data()
-print('px_train shape:', px_train.shape)
-print('px_test.shape:', px_test.shape)
-# Shift py from 0-9 to 1-10
-py_train += 1
-py_test += 1
-assert 0 not in np.unique(py_train)
-assert 0 not in np.unique(py_test)
-# Import cifar100 data as U set
-(ux_train, uy_train), (ux_test, uy_test) = cifar100.load_data()
-print('ux_train shape:', ux_train.shape)
-print('ux_test.shape:', ux_test.shape)
-# Mask all classes from cifar10 as 0 (negatives)
-uy_train[...] = 0
-uy_test[...] = 0
-assert uy_train.shape == (50000, 1)
-assert np.unique(uy_train) == [0]
-# Combine P set and U set
-x_train = np.concatenate((px_train, ux_train), axis=0).astype('float32')
-y_train = np.concatenate((py_train, uy_train), axis=0).astype('int8')
-x_test = np.concatenate((px_test, ux_test), axis=0).astype('float32')
-y_test = np.concatenate((py_test, uy_test), axis=0).astype('int8')
-# Construct artificial U set
-unique, counts = np.unique(y_train, return_counts=True)
-print('Complete labels: ', {k: v for k, v in zip(unique, counts)})
-np.random.seed(42)
-num_samples = y_train.shape[0]
-missing = np.random.rand(num_samples) < pct_missing
-for idx in range(num_samples):
-    if y_train[idx] > 0 and missing[idx]:
-        y_train[idx] = 0
-unique, counts = np.unique(y_train, return_counts=True)
-print("Missing {} positives.".format(pct_missing))
-print('Missing labels: ', {k: v for k, v in zip(unique, counts)})
-np.random.seed(None)
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
 # Convert class vectors to binary class matrices.
 y_train = keras.utils.to_categorical(y_train, num_classes)
@@ -93,7 +59,7 @@ elif net.lower() == 'vgg':
     model = VGG8(input_shape=x_train.shape[1:], num_classes=num_classes)
 else:
     model = WideResidualNetwork(depth=28, width=8, dropout_rate=0.5,
-            classes=11, include_top=True, weights=None)
+            classes=num_classes, include_top=True, weights=None)
 
 if args.checkpoint:
     model = load_model(args.checkpoint)
@@ -132,12 +98,12 @@ csv_logger = CSVLogger(
 # EarlyStopping
 early_stopper = EarlyStopping(monitor='val_loss',
                               min_delta=0.001,
-                              patience=20)
+                              patience=10)
 # Reduce lr on plateau
 lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
                                cooldown=0,
-                               patience=10,
-                               min_lr=0.5e-5)
+                               patience=20,
+                               min_lr=0.5e-6)
 
 if not data_augmentation:
     print('Not using data augmentation.')
