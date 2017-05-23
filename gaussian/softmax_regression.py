@@ -51,6 +51,7 @@ class SoftmaxRegression(object):
                  l2=0.0,
                  minibatches=1,
                  n_classes=None,
+                 class_weight=None,
                  random_seed=None):
         """Init."""
         self.eta = eta
@@ -58,6 +59,7 @@ class SoftmaxRegression(object):
         self.l2 = l2
         self.minibatches = minibatches
         self.n_classes = n_classes
+        self.class_weight = class_weight
         self.random_seed = random_seed
 
     def _fit(self, X, y, init_params=True):
@@ -86,8 +88,8 @@ class SoftmaxRegression(object):
 
                 # net_input, softmax and diff -> n_samples x n_classes:
                 net = self._net_input(X[idx], self.w_, self.b_)
-                softm = self._softmax(net)
-                diff = self._diff(softm, y_enc[idx])
+                prob = self._softmax(net)
+                diff = self._diff(prob, y_enc[idx])
 
                 # gradient -> n_features x n_classes
                 grad = np.dot(X[idx].T, diff)
@@ -183,14 +185,35 @@ class SoftmaxRegression(object):
         return - (p) * np.log(q)
 
     def _cost(self, prob, y_enc):
-        cross_entropy = self._cross_entropy(prob, y_enc)
-        cross_entropy = np.sum(cross_entropy, axis=1)
-        L2_term = self.l2 * np.sum(self.w_ ** 2)
-        cross_entropy = cross_entropy + L2_term
-        return 0.5 * np.mean(cross_entropy)
+        loss = self._loss(prob, y_enc)
+        loss = loss + self.l2 * np.sum(self.w_ ** 2)
+        return 0.5 * np.mean(loss)
 
-    def _diff(self, softm, y_enc):
-        return softm - y_enc
+    def _loss(self, prob, y_enc):
+        loss = self._cross_entropy(prob, y_enc)
+        loss = np.sum(loss, axis=1)
+        if self.class_weight is not None:
+            sample_weights = self._sample_weights(y_enc, tiled=False)
+            loss = loss * sample_weights
+        return loss
+
+    def _diff(self, prob, y_enc):
+        diff = prob - y_enc
+        if self.class_weight is not None:
+            sample_weights = self._sample_weights(y_enc)
+            diff = diff * sample_weights
+        return diff
+
+    def _sample_weights(self, y_enc, tiled=True):
+        self.class_weight = np.array(self.class_weight)
+        self.class_weight /= np.max(self.class_weight)
+        sample_weights = np.ones(y_enc.shape)
+        for cl in range(self.n_classes):
+            idx = np.where(y_enc[:, cl])[0]
+            sample_weights[idx, :] = self.class_weight[cl]
+        if tiled is True:
+            return sample_weights
+        return sample_weights[:, 0]
 
     def _to_classlabels(self, z):
         return z.argmax(axis=1)
