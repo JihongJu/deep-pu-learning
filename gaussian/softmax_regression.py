@@ -181,7 +181,7 @@ class SoftmaxRegression(object):
         return (np.exp(z.T) / np.sum(np.exp(z), axis=1)).T
 
     def _cross_entropy(self, q, p):
-        q = q.clip(min=1e-8)
+        q = q.clip(min=1e-16)
         return - (p) * np.log(q)
 
     def _cost(self, prob, y_enc):
