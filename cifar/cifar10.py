@@ -54,12 +54,13 @@ opt = 'adam'
 if net.lower() == 'cnn':
     model = CNN(input_shape=x_train.shape[1:], num_classes=num_classes)
     # initiate RMSprop optimizer
-    #opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
+    # opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
 elif net.lower() == 'vgg':
     model = VGG8(input_shape=x_train.shape[1:], num_classes=num_classes)
 else:
     model = WideResidualNetwork(depth=28, width=8, dropout_rate=0.5,
-            classes=num_classes, include_top=True, weights=None)
+                                classes=num_classes, include_top=True,
+                                weights=None)
 
 if args.checkpoint:
     model = load_model(args.checkpoint)
@@ -119,12 +120,15 @@ else:
     datagen = ImageDataGenerator(
         featurewise_center=False,  # set input mean to 0 over the dataset
         samplewise_center=False,  # set each sample mean to 0
-        featurewise_std_normalization=False,  # divide inputs by std of the dataset
+        featurewise_std_normalization=False,  # divide inputs by std
         samplewise_std_normalization=False,  # divide each input by its std
         zca_whitening=False,  # apply ZCA whitening
-        rotation_range=0,  # randomly rotate images in the range (degrees, 0 to 180)
-        width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
-        height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
+        # randomly rotate images in the range (degrees, 0 to 180)
+        rotation_range=0,
+        # randomly shift images horizontally (fraction of total width)
+        width_shift_range=0.1,
+        # randomly shift images vertically (fraction of total height)
+        height_shift_range=0.1,
         horizontal_flip=True,  # randomly flip images
         vertical_flip=False)  # randomly flip images
 
