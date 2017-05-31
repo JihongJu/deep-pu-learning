@@ -11,7 +11,7 @@ import numpy as np
 
 
 class SoftmaxRegression(object):
-    """Softmax regression classifier.
+    """Linear Softmax regression classifier.
 
     Parameters
     ------------
@@ -52,6 +52,7 @@ class SoftmaxRegression(object):
                  minibatches=1,
                  n_classes=None,
                  class_weight=None,
+                 unbalanced=None,
                  random_seed=None):
         """Init."""
         self.eta = eta
@@ -60,6 +61,9 @@ class SoftmaxRegression(object):
         self.minibatches = minibatches
         self.n_classes = n_classes
         self.class_weight = class_weight
+        self.unbalanced = unbalanced
+        if self.class_weight is None and self.unbalanced is True:
+            self.class_weight = (1,) * self.n_classes
         self.random_seed = random_seed
 
     def _fit(self, X, y, init_params=True):
@@ -193,24 +197,26 @@ class SoftmaxRegression(object):
         loss = self._cross_entropy(prob, y_enc)
         loss = np.sum(loss, axis=1)
         if self.class_weight is not None:
-            sample_weights = self._sample_weights(y_enc, tiled=False)
+            sample_weights = self._get_sample_weights(y_enc, tiled=False)
             loss = loss * sample_weights
         return loss
 
     def _diff(self, prob, y_enc):
         diff = prob - y_enc
         if self.class_weight is not None:
-            sample_weights = self._sample_weights(y_enc)
+            sample_weights = self._get_sample_weights(y_enc, tiled=True)
             diff = diff * sample_weights
         return diff
 
-    def _sample_weights(self, y_enc, tiled=True):
-        self.class_weight = np.array(self.class_weight)
-        self.class_weight /= np.max(self.class_weight)
+    def _get_sample_weights(self, y_enc, tiled=True):
+        class_weight = np.array(self.class_weight).astype('float')
+        if self.unbalanced is True:
+            class_weight *= (1 / (np.sum(y_enc, axis=0) + 1))
+        class_weight /= np.max(class_weight)
         sample_weights = np.ones(y_enc.shape)
         for cl in range(self.n_classes):
             idx = np.where(y_enc[:, cl])[0]
-            sample_weights[idx, :] = self.class_weight[cl]
+            sample_weights[idx, :] = class_weight[cl]
         if tiled is True:
             return sample_weights
         return sample_weights[:, 0]
@@ -254,26 +260,26 @@ class SoftmaxRegression(object):
         return mat.astype(dtype)
 
     def _yield_minibatches_idx(self, n_batches, data_ary, shuffle=True):
-            indices = np.arange(data_ary.shape[0])
+        indices = np.arange(data_ary.shape[0])
 
-            if shuffle:
-                indices = np.random.permutation(indices)
-            if n_batches > 1:
-                remainder = data_ary.shape[0] % n_batches
+        if shuffle:
+            indices = np.random.permutation(indices)
+        if n_batches > 1:
+            remainder = data_ary.shape[0] % n_batches
 
-                if remainder:
-                    minis = np.array_split(indices[:-remainder], n_batches)
-                    minis[-1] = np.concatenate((minis[-1],
-                                                indices[-remainder:]),
-                                               axis=0)
-                else:
-                    minis = np.array_split(indices, n_batches)
-
+            if remainder:
+                minis = np.array_split(indices[:-remainder], n_batches)
+                minis[-1] = np.concatenate((minis[-1],
+                                            indices[-remainder:]),
+                                           axis=0)
             else:
-                minis = (indices,)
+                minis = np.array_split(indices, n_batches)
 
-            for idx_batch in minis:
-                yield idx_batch
+        else:
+            minis = (indices,)
+
+        for idx_batch in minis:
+            yield idx_batch
 
     def _shuffle_arrays(self, arrays):
         """Shuffle arrays in unison."""
