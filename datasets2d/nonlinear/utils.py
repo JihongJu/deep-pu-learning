@@ -40,7 +40,7 @@ def fit_plot(X, Y, fit_classifier=None):
     return plt
 
 
-def get_PU_labels(Y, pct_missings=None, random_seed=None):
+def get_PU_labels(Y, pct_missings=None, random_seed=None, verbose=False):
     """Get PU labels."""
     # To PU
     if pct_missings is None:
@@ -53,7 +53,7 @@ def get_PU_labels(Y, pct_missings=None, random_seed=None):
         flip = np.random.rand(n_samples)
         y[(y != 0) & (flip < pct)] = 0
         Y_pu[pct] = np.eye(Y.shape[1])[y]
-        if random_seed is not None:
+        if verbose is True:
             print('Positive (pct_missing={}):'.format(pct),
                   np.sum(np.argmax(Y, 1)), ' vs.', np.sum(y))
     return Y_pu

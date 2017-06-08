@@ -4,12 +4,12 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 
 
-class MultilayerPerceptron:
+class MultilayerPerceptron(object):
     """MultilayerPerceptron."""
 
     def __init__(self, n_input, n_classes, n_hiddens=[8, 8],
                  learning_rate=0.01, batch_size=100,
-                 training_epochs=30, beta=1e-3,
+                 training_epochs=30, regularization=1e-3,
                  display_step=5,
                  class_weight=None,
                  imbalanced=None, verbose=None):
@@ -20,7 +20,7 @@ class MultilayerPerceptron:
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.training_epochs = training_epochs
-        self.beta = beta
+        self.regularization = regularization
         self.display_step = display_step
         if class_weight is None:
             self.class_weight = np.ones(n_classes).astype("float")
@@ -32,30 +32,33 @@ class MultilayerPerceptron:
         self.imbalanced = imbalanced
         self.verbose = verbose
 
-        # tf Graph input
-        self.x = tf.placeholder("float", [None, n_input])
-        self.y = tf.placeholder("float", [None, n_classes])
+        # Define Graph
+        tf.reset_default_graph()
+        with tf.device('/gpu:0'):
+            # tf Graph input
+            self.x = tf.placeholder("float", [None, n_input])
+            self.y = tf.placeholder("float", [None, n_classes])
 
-        # loss class weight
-        self.a = tf.placeholder("float", [n_classes])
-        # self.class_weight = tf.ones([n_classes], "float")
+            # loss class weight
+            self.a = tf.placeholder("float", [n_classes])
+            # self.class_weight = tf.ones([n_classes], "float")
 
-        # Layer weights and biases
-        self.weights = {
-            'h1': tf.Variable(tf.random_normal([n_input, n_hiddens[0]])),
-            'h2': tf.Variable(tf.random_normal([n_hiddens[0], n_hiddens[1]])),
-            'out': tf.Variable(tf.random_normal([n_hiddens[1], n_classes]))
-        }
-        self.biases = {
-            'b1': tf.Variable(tf.random_normal([n_hiddens[0]])),
-            'b2': tf.Variable(tf.random_normal([n_hiddens[1]])),
-            'out': tf.Variable(tf.random_normal([n_classes]))
-        }
+            # Layer weights and biases
+            self.weights = {
+                'h1': tf.get_variable("h1", shape=[n_input, n_hiddens[0]]),
+                'h2': tf.get_variable("h2", shape=[n_hiddens[0], n_hiddens[1]]),
+                'out': tf.get_variable("out", shape=[n_hiddens[1], n_classes])
+            }
+            self.biases = {
+                'b1': tf.Variable(tf.random_normal([n_hiddens[0]])),
+                'b2': tf.Variable(tf.random_normal([n_hiddens[1]])),
+                'out': tf.Variable(tf.random_normal([n_classes]))
+            }
 
-        # Construct model
-        self.prob = self._forward(self.x, self.weights, self.biases)
-        self.cost = self._cost(self.prob, self.y, self.a)
-        self.pred = tf.argmax(self.prob, 1)
+            # Construct model
+            self.prob = self._forward(self.x, self.weights, self.biases)
+            self.cost = self._cost(self.prob, self.y, self.a)
+            self.pred = tf.argmax(self.prob, 1)
 
         # Optimizer
         self.optimizer = tf.train.AdamOptimizer(
@@ -65,7 +68,8 @@ class MultilayerPerceptron:
         self.init = tf.global_variables_initializer()
 
         # Session
-        self.sess = tf.Session()
+        config = tf.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.Session(config=config)
 
     def _forward(self, x, weights, biases):
         # Hidden layer with RELU activation
@@ -88,7 +92,7 @@ class MultilayerPerceptron:
         regularizer = tf.constant(0.)
         for w in self.weights.values():
             regularizer = tf.add(regularizer, tf.nn.l2_loss(w))
-        cost = tf.reduce_mean(loss + self.beta * regularizer)
+        cost = tf.reduce_mean(loss + self.regularization * regularizer)
         return cost
 
     def fit(self, X, Y, batch_size=None, training_epochs=None,
@@ -127,7 +131,7 @@ class MultilayerPerceptron:
                                                coord=coord)
 
         # Fit
-        total_batch = int(X.shape[0] / batch_size)
+        total_batch = int(int(X.shape[0]) / batch_size)
         for epoch in range(training_epochs):
             avg_cost = 0.
             for i in range(total_batch):
