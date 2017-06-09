@@ -1,8 +1,6 @@
 """Utility module."""
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-
 
 def fit_plot(X, Y, fit_classifier=None):
     """Fit and plot."""
@@ -13,29 +11,40 @@ def fit_plot(X, Y, fit_classifier=None):
     y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
-    cm = plt.cm.RdBu
-    cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+
+    n_classes = Y.shape[1]
+    f, ax = plt.subplots(n_classes-1, figsize=(10, 8*(n_classes-1)))
+    if n_classes == 2:
+        axs = [ax]
 
     if fit_classifier:
         # we create an instance of Neighbe the number of bootstrap resamples
         # (n_boot) or set ci to None.ours Classifier and fit the data.
         fit_classifier.fit(X, Y)
-        Z = fit_classifier.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
+        Z = fit_classifier.predict_proba(np.c_[xx.ravel(), yy.ravel()])
 
-        # Put the result into a color plot
-        Z = Z.reshape(xx.shape)
-        plt.figure(1, figsize=(8, 6))
-        plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+        cmaps = [plt.cm.RdBu, plt.cm.RdYlGn]
+        for k in range(1, n_classes):
+            z = Z[:, k]
+            # Put the result into a color plot
+            zz = z.reshape(xx.shape)
+            axs[k-1].contourf(xx, yy, zz, cmap=cmaps[k-1], alpha=.6)
+            axs[k-1].set_title('Class {}'.format(k))
 
     # Plot also the training points
-    plt.scatter(X[:, 0], X[:, 1], c=Y[:, 1], cmap=cm_bright)
-    plt.xlabel('$x_0$')
-    plt.ylabel('$x_1$')
+    ms = ['o', 's', '^']
+    cs = ['r', 'b', 'g']
+    n_samples = Y.shape[0]
+    for k in range(1, n_classes):
+        y = np.argmax(Y, axis=1)
+        for idx in range(n_samples):
+            axs[k-1].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]], marker=ms[y[idx]],
+                    s=50)
+        axs[k-1].set_xlabel('$x_0$')
+        axs[k-1].set_ylabel('$x_1$')
 
-    plt.xlim(xx.min(), xx.max())
-    plt.ylim(yy.min(), yy.max())
-    plt.xticks(())
-    plt.yticks(())
+        axs[k-1].set_xlim(xx.min(), xx.max())
+        axs[k-1].set_ylim(yy.min(), yy.max())
     # plt.show()
     return plt
 
