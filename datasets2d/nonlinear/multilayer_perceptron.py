@@ -10,7 +10,7 @@ class MultilayerPerceptron(object):
     def __init__(self, n_input, n_classes, n_hiddens=[8, 8],
                  learning_rate=0.01, batch_size=100,
                  training_epochs=30, regularization=1e-3,
-                 display_step=5,
+                 display_step=10,
                  class_weight=None,
                  imbalanced=None, verbose=None):
         """Init."""
@@ -56,9 +56,12 @@ class MultilayerPerceptron(object):
             }
 
             # Construct model
-            self.prob = self._forward(self.x, self.weights, self.biases)
-            self.cost = self._cost(self.prob, self.y, self.a)
+            self.out = self._forward(self.x, self.weights, self.biases)
+            self.prob = tf.nn.softmax(self.out)
+            self.loss = self._loss(self.prob, self.y, self.a)
+            self.cost = self._regularize(self.loss)
             self.pred = tf.argmax(self.prob, 1)
+            self.out_grad = tf.gradients(self.cost, [self.out])
 
         # Optimizer
         self.optimizer = tf.train.AdamOptimizer(
@@ -80,15 +83,17 @@ class MultilayerPerceptron(object):
         layer_2 = tf.nn.relu(layer_2)
         # Output layer with softmax activation
         out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
-        out_layer = tf.nn.softmax(out_layer)
 
         return out_layer
 
-    def _cost(self, prob, y, class_weight):
-        loss = tf.reduce_mean(
-            tf.nn.weighted_cross_entropy_with_logits(logits=prob,
-                                                     targets=y,
-                                                     pos_weight=class_weight))
+    def _loss(self, prob, y, class_weight):
+        loss = tf.nn.weighted_cross_entropy_with_logits(logits=prob,
+                                                        targets=y,
+                                                        pos_weight=class_weight)
+        return loss
+
+    def _regularize(self, loss):
+        loss = tf.reduce_mean(loss)
         regularizer = tf.constant(0.)
         for w in self.weights.values():
             regularizer = tf.add(regularizer, tf.nn.l2_loss(w))
@@ -158,6 +163,38 @@ class MultilayerPerceptron(object):
         """Predict probability on a test set."""
         prob = self.sess.run(self.prob, feed_dict={self.x: X})
         return prob
+
+    def calc_loss(self, X, Y, imbalanced=None):
+        """Return loss."""
+        if imbalanced is None:
+            imbalanced = self.imbalanced
+        A = self.class_weight
+        # Weighing samples differently based on frequency if imbalanced is True
+        if imbalanced is True:
+            A *= 1 / (np.sum(Y, axis=0) + 1)
+            A /= np.min(A)
+            if self.verbose is True:
+                print("Using class_weight", A)
+        loss = self.sess.run(self.loss, feed_dict={self.x: X,
+                                                   self.y: Y,
+                                                   self.a: A})
+        return loss
+
+    def calc_gradients(self, X, Y, imbalanced=None):
+        """Return loss gradient w.r.t the last layer output."""
+        if imbalanced is None:
+            imbalanced = self.imbalanced
+        A = self.class_weight
+        # Weighing samples differently based on frequency if imbalanced is True
+        if imbalanced is True:
+            A *= 1 / (np.sum(Y, axis=0) + 1)
+            A /= np.min(A)
+            if self.verbose is True:
+                print("Using class_weight", A)
+        out_grad = self.sess.run(self.out_grad, feed_dict={self.x: X,
+                                                           self.y: Y,
+                                                           self.a: A})
+        return out_grad
 
     def close_session(self):
         """Close the running session."""
