@@ -1,21 +1,50 @@
 """Utility module."""
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
-def fit_plot(X, Y, fit_classifier=None):
+
+def normalize_size(S, Y, min_size=5, max_size=30):
+    """Normalize S to (min_size, max_size)."""
+    N, K = Y.shape
+    for k in range(K):
+        is_k = Y[:, k] > 0.
+        S_k = S[is_k]
+        S_k = (S_k - np.min(S_k)) / (np.max(S_k) - np.min(S_k))
+        S[is_k] = S_k * (max_size - min_size) + min_size
+    return S
+
+
+def fit_plot(X, Y, fit_classifier=None, marker_size=None):
     """Fit and plot."""
     from IPython import get_ipython
     get_ipython().run_line_magic('matplotlib', 'inline')
+
     h = .02  # mesh step size
     x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
     y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
 
+    min_size, max_size = 5, 30  # min and max mark size
+    default_size = 10
+    S = np.ones(X.shape[0]) * default_size  # default maker size
+    if marker_size is None:
+        marker_size = ["default"]
+    if not isinstance(marker_size, list):
+        marker_size = [marker_size]
+
     n_classes = Y.shape[1]
-    f, ax = plt.subplots(n_classes-1, figsize=(10, 8*(n_classes-1)))
-    if n_classes == 2:
-        axs = [ax]
+    n_rows = n_classes - 1
+    n_cols = len(marker_size)
+
+    f, axs = plt.subplots(n_rows, n_cols, figsize=(10 * n_cols, 8 * n_rows))
+    if isinstance(axs, matplotlib.axes.SubplotBase):
+        axs = np.array([axs])
+    if n_rows == 1:
+        axs = np.expand_dims(axs, 0)
+    elif n_cols == 1:
+        axs = np.expand_dims(axs, 1)
 
     if fit_classifier:
         # we create an instance of Neighbe the number of bootstrap resamples
@@ -23,28 +52,43 @@ def fit_plot(X, Y, fit_classifier=None):
         fit_classifier.fit(X, Y)
         Z = fit_classifier.predict_proba(np.c_[xx.ravel(), yy.ravel()])
 
-        cmaps = [plt.cm.RdBu, plt.cm.RdYlGn]
-        for k in range(1, n_classes):
-            z = Z[:, k]
-            # Put the result into a color plot
-            zz = z.reshape(xx.shape)
-            axs[k-1].contourf(xx, yy, zz, cmap=cmaps[k-1], alpha=.6)
-            axs[k-1].set_title('Class {}'.format(k))
+        for j in range(n_cols):
+            if marker_size[j] == "gradient":
+                G = fit_classifier.calc_gradients(X, Y)[0]
+                G = np.abs(G)
+                S = np.sum(G, axis=1)
+                S = normalize_size(S, Y, min_size, max_size)
+            elif marker_size[j] == "loss":
+                L = fit_classifier.calc_loss(X, Y)
+                S = np.sum(L, axis=1)
+                S = normalize_size(S, Y, min_size, max_size)
+
+            cmaps = [plt.cm.RdBu, plt.cm.RdYlGn]
+            for k in range(1, n_classes):
+                z = Z[:, k]
+                # Put the result into a color plot
+                zz = z.reshape(xx.shape)
+                axs[k - 1, j].contourf(xx, yy, zz, cmap=cmaps[k - 1], alpha=.6)
+                axs[k - 1, j].set_title(
+                    'Class {} {}'.format(k, marker_size[j]))
 
     # Plot also the training points
     ms = ['o', 's', '^']
     cs = ['r', 'b', 'g']
     n_samples = Y.shape[0]
+    y = np.argmax(Y, axis=1)
     for k in range(1, n_classes):
-        y = np.argmax(Y, axis=1)
-        for idx in range(n_samples):
-            axs[k-1].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]], marker=ms[y[idx]],
-                    s=50)
-        axs[k-1].set_xlabel('$x_0$')
-        axs[k-1].set_ylabel('$x_1$')
+        for j in range(n_cols):
+            for idx in range(n_samples):
+                axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
+                                      marker=ms[y[idx]], s=10 * S[idx])
+            axs[k - 1, j].set_xlabel('$x_0$')
+            axs[k - 1, j].set_ylabel('$x_1$')
 
-        axs[k-1].set_xlim(xx.min(), xx.max())
-        axs[k-1].set_ylim(yy.min(), yy.max())
+            axs[k - 1, j].set_xlim(xx.min(), xx.max())
+            axs[k - 1, j].set_ylim(yy.min(), yy.max())
+            axs[k - 1, j].set_xticks(())
+            axs[k - 1, j].set_yticks(())
     # plt.show()
     return plt
 

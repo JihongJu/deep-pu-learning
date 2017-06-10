@@ -28,17 +28,21 @@ def cross_entropy_and_difference_with_logits(logits, labels, weights):
 class ClassDepLossMultilayerPerceptron(MultilayerPerceptron):
     """Class dependent loss MLP."""
 
-    def _cost(self, prob, y, class_weight):
+    def _loss(self, prob, y, class_weight):
         loss = tf.reduce_mean(
             cross_entropy_and_difference_with_logits(
                 logits=prob,
                 labels=y,
                 weights=class_weight
             ))
+        return loss
+
+    def _cost(self, prob, y, class_weight):
+        self.loss = self._loss(prob, y, class_weight)
         regularizer = tf.constant(0.)
         for w in self.weights.values():
             regularizer = tf.add(regularizer, tf.nn.l2_loss(w))
-        cost = tf.reduce_mean(loss + self.regularization * regularizer)
+        cost = tf.reduce_mean(self.loss + self.regularization * regularizer)
         return cost
 
 
@@ -48,7 +52,7 @@ class HardBoostrappingMultilayerPerceptron(MultilayerPerceptron):
     def __init__(self, n_input, n_classes, n_hiddens=[8, 8],
                  learning_rate=0.01, batch_size=100,
                  training_epochs=30, regularization=1e-3,
-                 display_step=5,
+                 display_step=10,
                  betas=None,
                  class_weight=None,
                  imbalanced=None, verbose=None):
