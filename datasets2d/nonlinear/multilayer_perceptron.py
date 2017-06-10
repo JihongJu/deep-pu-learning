@@ -34,31 +34,29 @@ class MultilayerPerceptron(object):
 
         # Define Graph
         tf.reset_default_graph()
-        with tf.device('/gpu:0'):
-            # tf Graph input
-            self.x = tf.placeholder("float", [None, n_input])
-            self.y = tf.placeholder("float", [None, n_classes])
+        # tf Graph input
+        self.x = tf.placeholder("float", [None, n_input])
+        self.y = tf.placeholder("float", [None, n_classes])
 
-            # loss class weight
-            self.a = tf.placeholder("float", [n_classes])
-            # self.class_weight = tf.ones([n_classes], "float")
+        # loss class weight
+        self.a = tf.placeholder("float", [n_classes])
 
-            # Layer weights and biases
-            self.weights = {
-                'h1': tf.get_variable("h1", shape=[n_input, n_hiddens[0]]),
-                'h2': tf.get_variable("h2", shape=[n_hiddens[0], n_hiddens[1]]),
-                'out': tf.get_variable("out", shape=[n_hiddens[1], n_classes])
-            }
-            self.biases = {
-                'b1': tf.Variable(tf.random_normal([n_hiddens[0]])),
-                'b2': tf.Variable(tf.random_normal([n_hiddens[1]])),
-                'out': tf.Variable(tf.random_normal([n_classes]))
-            }
+        # Layer weights and biases
+        self.weights = {
+            'h1': tf.get_variable("h1", shape=[n_input, n_hiddens[0]]),
+            'h2': tf.get_variable("h2", shape=[n_hiddens[0], n_hiddens[1]]),
+            'out': tf.get_variable("out", shape=[n_hiddens[1], n_classes])
+        }
+        self.biases = {
+            'b1': tf.Variable(tf.random_normal([n_hiddens[0]])),
+            'b2': tf.Variable(tf.random_normal([n_hiddens[1]])),
+            'out': tf.Variable(tf.random_normal([n_classes]))
+        }
 
-            # Construct model
-            self.prob = self._forward(self.x, self.weights, self.biases)
-            self.cost = self._cost(self.prob, self.y, self.a)
-            self.pred = tf.argmax(self.prob, 1)
+        # Construct model
+        self.prob = self._forward(self.x, self.weights, self.biases)
+        self.cost = self._cost(self.prob, self.y, self.a)
+        self.pred = tf.argmax(self.prob, 1)
 
         # Optimizer
         self.optimizer = tf.train.AdamOptimizer(
@@ -69,6 +67,7 @@ class MultilayerPerceptron(object):
 
         # Session
         config = tf.ConfigProto(allow_soft_placement=True)
+        config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=config)
 
     def _forward(self, x, weights, biases):
