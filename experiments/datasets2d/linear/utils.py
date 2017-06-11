@@ -10,7 +10,7 @@ def show_label_partition(Y):
     print("-:", np.sum(Y == 0))
 
 
-def fit_plot(X, Y, fit_classifier=None):
+def fit_and_plot(X, Y, classifier=None):
     """Fit and plot."""
     from IPython import get_ipython
     get_ipython().run_line_magic('matplotlib', 'inline')

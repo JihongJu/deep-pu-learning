@@ -4,21 +4,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-def normalize_size(S, Y, min_size=5, max_size=30):
-    """Normalize S to (min_size, max_size)."""
-    N, K = Y.shape
-    for k in range(K):
-        is_k = Y[:, k] > 0.
-        S_k = S[is_k]
-        S_k = (S_k - np.min(S_k)) / (np.max(S_k) - np.min(S_k))
-        S[is_k] = S_k * (max_size - min_size) + min_size
-    return S
-
-
-def fit_plot(X, Y, fit_classifier=None, marker_size=None):
+def fit_and_plot(X, Y, classifier=None, marker_size=None):
     """Fit and plot."""
-    from IPython import get_ipython
-    get_ipython().run_line_magic('matplotlib', 'inline')
+    # from IPython import get_ipython
+    # get_ipython().run_line_magic('matplotlib', 'inline')
 
     h = .02  # mesh step size
     x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
@@ -46,21 +35,31 @@ def fit_plot(X, Y, fit_classifier=None, marker_size=None):
     elif n_cols == 1:
         axs = np.expand_dims(axs, 1)
 
-    if fit_classifier:
+    if classifier:
         # we create an instance of Neighbe the number of bootstrap resamples
         # (n_boot) or set ci to None.ours Classifier and fit the data.
-        fit_classifier.fit(X, Y)
-        Z = fit_classifier.predict_proba(np.c_[xx.ravel(), yy.ravel()])
+        classifier.fit(X, Y)
+        Z = classifier.predict_proba(np.c_[xx.ravel(), yy.ravel()])
+
+        def normalize_size(S, Y, min_size=5, max_size=30):
+            """Normalize S to (min_size, max_size)."""
+            N, K = Y.shape
+            for k in range(K):
+                is_k = Y[:, k] > 0.
+                S_k = S[is_k]
+                S_k = (S_k - np.min(S_k)) / (np.max(S_k) - np.min(S_k))
+                S[is_k] = S_k * (max_size - min_size) + min_size
+            return S
 
         for j in range(n_cols):
             if marker_size[j] == "gradient":
-                G = fit_classifier.calc_gradients(X, Y)[0]
+                G = classifier.calc_gradient(X, Y)
                 G = np.abs(G)
                 S = np.sum(G, axis=1)
                 S = normalize_size(S, Y, min_size, max_size)
             elif marker_size[j] == "loss":
-                L = fit_classifier.calc_loss(X, Y)
-                S = np.sum(L, axis=1)
+                L = classifier.calc_loss(X, Y)
+                S = L
                 S = normalize_size(S, Y, min_size, max_size)
 
             cmaps = [plt.cm.RdBu, plt.cm.RdYlGn]
@@ -81,7 +80,8 @@ def fit_plot(X, Y, fit_classifier=None, marker_size=None):
         for j in range(n_cols):
             for idx in range(n_samples):
                 axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
-                                      marker=ms[y[idx]], s=10 * S[idx])
+                                      marker=ms[y[idx]], s=10 * S[idx],
+                                      edgecolor='black', linewidth='1')
             axs[k - 1, j].set_xlabel('$x_0$')
             axs[k - 1, j].set_ylabel('$x_1$')
 
@@ -93,13 +93,14 @@ def fit_plot(X, Y, fit_classifier=None, marker_size=None):
     return plt
 
 
-def get_PU_labels(Y, pct_missings=None, random_seed=None, verbose=False):
-    """Get PU labels."""
+def synthesize_pu_labels(Y, pct_missings=None, random_state=None,
+                         verbose=False):
+    """Synthesize PU labels."""
     # To PU
     if pct_missings is None:
         pct_missings = np.arange(0., 1 + 1e-8, 0.1)
     Y_pu = {}
-    np.random.seed(random_seed)
+    np.random.seed(random_state)
     n_samples = len(Y)
     for pct in pct_missings:
         y = np.argmax(Y, 1)
