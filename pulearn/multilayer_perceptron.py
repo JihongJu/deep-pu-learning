@@ -49,6 +49,8 @@ class MultilayerPerceptron(object):
         self.class_weight = class_weight
         self.verbose = verbose
 
+        self.sess = None
+
         self._build()
 
     def _build(self):
@@ -111,12 +113,25 @@ class MultilayerPerceptron(object):
         return out_layer
 
     def _loss(self, out, y, class_weight):
-        loss = tf.nn.weighted_cross_entropy_with_logits(
-            logits=out,
-            targets=y,
-            pos_weight=class_weight)
-        loss = tf.reduce_sum(loss, axis=1)
+        # loss = tf.nn.weighted_cross_entropy_with_logits(
+        #     logits=out,
+        #     targets=y,
+        #     pos_weight=1.)
+        loss = tf.nn.softmax_cross_entropy_with_logits(
+            logits=out, labels=y)
+        loss = self._balance(loss, y, class_weight)
 
+        return loss
+
+    def _balance(self, loss, y, class_weight):
+        n_samples, n_classes = y.get_shape()
+        y_cat = tf.argmax(y, axis=1)
+        for k in range(n_classes):
+            q_k = class_weight[k]  # class weight
+            ks = tf.scalar_mul(k, tf.ones_like(y_cat))
+            mask_k = tf.equal(y_cat, ks)
+            loss_k = tf.scalar_mul(q_k, loss)
+            loss = tf.where(mask_k, loss_k, loss)
         return loss
 
     def _regularize(self, loss):
@@ -218,4 +233,5 @@ class MultilayerPerceptron(object):
 
     def close_session(self):
         """Close the running session."""
-        self.sess.close()
+        if self.sess is not None:
+            self.sess.close()

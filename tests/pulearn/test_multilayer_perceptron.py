@@ -35,12 +35,22 @@ class TestMultilayerPerceptron(unittest.TestCase):
         assert np.allclose(class_weight, [1, 2])
 
     def test_loss(self):
-        prob = tf.Variable([[0.6, 0.4], [0.1, 0.9]], dtype=tf.float64)
-        y_enc = tf.Variable([[1., 0.], [1., 0.]], dtype=tf.float64)
-        class_weight = tf.Variable([1., 1.], dtype=tf.float64)
+        out = tf.Variable([[-5., 5.], [8, -2.]], dtype=tf.float32)
+        y_enc = tf.Variable([[1., 0.], [1., 0.]], dtype=tf.float32)
+        class_weight = tf.Variable([1., 1.], dtype=tf.float32)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            loss = sess.run(self.classifier._loss(prob, y_enc, class_weight))
+            loss = sess.run(self.classifier._loss(out, y_enc, class_weight))
             print(loss)
-            assert np.allclose(loss, [1.3505032, 1.88555053])
-        assert False
+            assert np.allclose(loss, [10., 4.54177061e-05])
+
+    def test_balance(self):
+        loss = tf.Variable(np.ones(2), dtype=tf.float32)
+        y_enc = tf.Variable([[1., 0.], [0., 1.]], dtype=tf.float32)
+        class_weight = tf.Variable([0.5, 1.], dtype=tf.float32)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            loss = sess.run(self.classifier._balance(
+                loss, y_enc, class_weight))
+            print(loss)
+            assert np.allclose(loss, [0.5, 1.])

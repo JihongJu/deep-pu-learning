@@ -75,7 +75,8 @@ class HardBootstrappingSoftmaxRegression(SoftmaxRegression):
         betas = self._to_unlabelled_sample_weight(y_enc)
         loss = loss * betas + (1 - betas) * cross_ent_pred
 
-        sample_weight = self._to_sample_weight(y_enc, tiled=True)
+        loss = np.sum(loss, axis=1)
+        sample_weight = self._to_sample_weight(y_enc, tiled=False)
         loss = loss * sample_weight
         return loss
 
@@ -119,34 +120,21 @@ class HardBootstrappingSoftmaxRegression(SoftmaxRegression):
         return unlabelled_sample_weight
 
 
-class ClassDepLossSoftmaxRegression(SoftmaxRegression):
-    """Class dependent loss SoftmaxRegression."""
-
-    def __init__(self, eta=0.01, epochs=100,
-                 l2=0.0,
-                 minibatches=1,
-                 n_classes=None,
-                 class_weight=None,
-                 unbalanced=None,
-                 random_seed=None):
-        """Init."""
-        super(ClassDepLossSoftmaxRegression, self).__init__(eta, epochs,
-                                                            l2,
-                                                            minibatches,
-                                                            n_classes,
-                                                            class_weight,
-                                                            unbalanced,
-                                                            random_seed)
+class UnlabelledExponentialLossSoftmaxRegression(
+        WeightedUnlabelledSoftmaxRegression):
+    """Use exponential loss for unlabelled samples."""
 
     def _loss(self, prob, y_enc):
         loss = self._cross_entropy(prob, y_enc)
+
         negidx = np.where(y_enc[:, 0])[0]
-        loss[negidx, :] = 0   # redundant
+        loss[negidx, :] = 0
         loss[negidx, 0] = (1 - prob[negidx, 0])
+
         loss = np.sum(loss, axis=1)
-        if self.class_weight is not None:
-            sample_weights = self._get_sample_weights(y_enc, tiled=False)
-            loss = loss * sample_weights
+        sample_weight = self._to_sample_weight(y_enc, tiled=False)
+        loss = loss * sample_weight
+
         return loss
 
     def _diff(self, prob, y_enc):
@@ -157,9 +145,10 @@ class ClassDepLossSoftmaxRegression(SoftmaxRegression):
                 diff[negidx, cl] = prob[negidx, 0] * (prob[negidx, cl] - 1)
             else:
                 diff[negidx, cl] = prob[negidx, 0] * prob[negidx, cl]
-        if self.class_weight is not None:
-            sample_weights = self._get_sample_weights(y_enc, tiled=True)
-            diff = diff * sample_weights
+
+        sample_weight = self._to_sample_weight(y_enc, tiled=True)
+        diff = diff * sample_weight
+
         return diff
 
 

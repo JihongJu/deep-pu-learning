@@ -18,8 +18,8 @@ def cross_entropy_and_difference_with_logits(logits, labels, weights):
         tf.subtract(labels, logits))
 
     is_negative = labels[:, 0] > 0.5
-    n_features = loss_pos.get_shape()[1]
-    negative_mask = tf.stack([is_negative] * int(n_features), axis=1)
+    n_classes = loss_pos.get_shape()[1]
+    negative_mask = tf.stack([is_negative] * int(n_classes), axis=1)
     loss = tf.where(negative_mask, loss_neg, loss_pos)
 
     return loss
