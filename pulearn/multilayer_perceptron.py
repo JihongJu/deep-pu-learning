@@ -113,10 +113,6 @@ class MultilayerPerceptron(object):
         return out_layer
 
     def _loss(self, out, y, class_weight):
-        # loss = tf.nn.weighted_cross_entropy_with_logits(
-        #     logits=out,
-        #     targets=y,
-        #     pos_weight=1.)
         loss = tf.nn.softmax_cross_entropy_with_logits(
             logits=out, labels=y)
         loss = self._balance(loss, y, class_weight)
