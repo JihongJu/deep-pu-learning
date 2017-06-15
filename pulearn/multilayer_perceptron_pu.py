@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import pulearn.losses.tensorflow_losses as L
 from .multilayer_perceptron import MultilayerPerceptron
 
 
@@ -53,28 +54,10 @@ class UnlabelledExponentialLossMultilayerPerceptron(
     """Use exponential loss for unlabelled samples."""
 
     def _loss(self, out, y, class_weight):
-        loss = self._cross_entropy_and_exponential_loss_with_logits(
+        loss = L.cross_entropy_and_exponential_loss_with_logits(
             logits=out,
             labels=y)
         loss = self._balance(loss, y, class_weight)
-        return loss
-
-    def _cross_entropy_and_exponential_loss_with_logits(self, logits, labels):
-        """Class dependent loss.
-
-        Using cross entropy for P and absolute difference for U.
-        """
-        loss_pos = tf.nn.softmax_cross_entropy_with_logits(
-            logits=logits,
-            labels=labels)
-        prob = tf.nn.softmax(logits)
-        loss_neg = tf.multiply(
-            labels[:, 0],
-            tf.subtract(labels[:, 0], prob[:, 0]))
-        y_cat = tf.argmax(labels, axis=1)
-        negative_mask = tf.equal(y_cat, tf.zeros_like(y_cat))
-        loss = tf.where(negative_mask, loss_neg, loss_pos)
-
         return loss
 
 

@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-def fit_and_plot(X, Y, classifier=None, marker_size=None):
+def fit_and_plot(X, Y, classifier=None, marker_size=None, Y_true=None):
     """Fit and plot."""
     # from IPython import get_ipython
     # get_ipython().run_line_magic('matplotlib', 'inline')
@@ -59,7 +59,8 @@ def fit_and_plot(X, Y, classifier=None, marker_size=None):
                 zz = z.reshape(xx.shape)
                 axs[k - 1, j].contourf(xx, yy, zz, cmap=cmaps[k - 1], alpha=.6)
                 axs[k - 1, j].set_title(
-                    'Class {} probabilty, per instance {}'.format(k, marker_size[j]))
+                    'Class {} probabilty, per instance {}'.format(
+                        k, marker_size[j]))
 
             if marker_size[j] == "gradient":
                 G = classifier.calc_gradient(X, Y)
@@ -74,17 +75,30 @@ def fit_and_plot(X, Y, classifier=None, marker_size=None):
             S[:, j] = s.copy()
 
     # Plot also the training points
-    # print(S[:, 0] != S[:, 1])
     ms = ['o', 's', '^']
     cs = ['r', 'b', 'g']
+
     n_samples = Y.shape[0]
     y = np.argmax(Y, axis=1)
+    if Y_true is None:
+        y_flip = np.zeros(n_samples, dtype=bool)
+    else:
+        y_true = np.argmax(Y_true, axis=1)
+        y_flip = np.logical_and(y == 0, y_true != 0)
+
     for k in range(1, n_classes):
         for j in range(n_cols):
             for idx in range(n_samples):
-                axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
-                                      marker=ms[y[idx]], s=10 * S[idx, j],
-                                      edgecolor='black', linewidth='1')
+                if y_flip[idx] > 0:
+                    axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
+                                          marker=ms[y[idx]], s=10 * S[idx, j],
+                                          edgecolor='black', linewidth='1',
+                                          linestyle='dotted')
+                else:
+                    axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
+                                          marker=ms[y[idx]], s=10 * S[idx, j],
+                                          edgecolor='black', linewidth='1',
+                                          linestyle='solid')
             axs[k - 1, j].set_xlabel('$x_0$')
             axs[k - 1, j].set_ylabel('$x_1$')
 

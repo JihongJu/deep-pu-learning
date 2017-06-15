@@ -33,7 +33,7 @@ def test_hard_bootstrapping():
     y_enc = np.asarray([[1, 0], [1, 0]])
     loss = hbsr._loss(prob, y_enc)
     print(loss)
-    assert loss[0, 1] == 0 and np.all(loss[1:] > 0)
+    assert np.allclose(loss, [0.51082562,  1.2039728])
 
     diff = hbsr._diff(prob, y_enc)
     print(diff)

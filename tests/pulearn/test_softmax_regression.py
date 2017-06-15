@@ -99,7 +99,7 @@ class TestSoftmaxRegression(unittest.TestCase):
 
     def test_calc_loss(self):
         self.classifier.fit(self.X, self.y)
-        loss = self.classifier.calc_loss(self.X, self.y, reduced=True)
+        loss = self.classifier.calc_loss(self.X, self.y)
         assert loss.shape == (200,)
 
     def test_calc_gradient(self):
