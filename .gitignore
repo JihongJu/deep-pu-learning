@@ -97,3 +97,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# h5 files
+*.h5
