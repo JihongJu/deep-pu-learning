@@ -27,13 +27,13 @@ class SoftmaxRegression(object):
         Constant that multiplies the L2 regularization term. Defaults to 0.0.
     batch_size: int
         Size of minibatches for stochastic optimizers. Defaults to 200.
-    class_weight: dict, {class_label: weight} or “balanced” or None, optional
+    class_weight: dict, {class_label: weight} or "balanced" or None, optional
         Preset for the class_weight fit parameter.
 
         Weights associated with classes. If not given, all classes are
         supposed to have weight one.
 
-        The “balanced” mode uses the values of y to automatically adjust
+        The "balanced" mode uses the values of y to automatically adjust
         weights inversely proportional to class frequencies in the input data
         as 1 / (np.bincount(y) + 1)
     random_state : int seed, RandomState instance, or None (default)
