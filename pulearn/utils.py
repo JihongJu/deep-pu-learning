@@ -23,9 +23,9 @@ def fit_and_plot(X, Y, classifier=None, marker_size=None, Y_true=None):
         marker_size = [marker_size]
 
     n_samples, n_classes = Y.shape
-    n_rows = n_classes - 1
-    n_cols = len(marker_size)
-    S = np.ones((X.shape[0], n_cols)) * default_size  # default maker size
+    n_rows = len(marker_size)
+    n_cols = n_classes - 1
+    S = np.ones((X.shape[0], n_rows)) * default_size  # default maker size
 
     f, axs = plt.subplots(n_rows, n_cols, figsize=(10 * n_cols, 8 * n_rows))
     if isinstance(axs, matplotlib.axes.SubplotBase):
@@ -51,16 +51,17 @@ def fit_and_plot(X, Y, classifier=None, marker_size=None, Y_true=None):
                 s[is_k] = s_k * (max_size - min_size) + min_size
             return s
 
-        for j in range(n_cols):
+        for j in range(n_rows):
             cmaps = [plt.cm.RdBu, plt.cm.RdYlGn]
             for k in range(1, n_classes):
                 z = Z[:, k]
                 # Put the result into a color plot
                 zz = z.reshape(xx.shape)
-                axs[k - 1, j].contourf(xx, yy, zz, cmap=cmaps[k - 1], alpha=.6)
-                axs[k - 1, j].set_title(
-                    'Class {} probabilty, per instance {}'.format(
-                        k, marker_size[j]))
+                axs[j, k - 1].contourf(xx, yy, zz,
+                                       cmap=cmaps[k - 1], alpha=.6)
+                # axs[j, k - 1].set_title(
+                #     'Class {} probabilty, per instance {}'.format(
+                #         k, marker_size[j]))
 
             if marker_size[j] == "gradient":
                 G = classifier.calc_gradient(X, Y)
@@ -87,26 +88,27 @@ def fit_and_plot(X, Y, classifier=None, marker_size=None, Y_true=None):
         y_flip = np.logical_and(y == 0, y_true != 0)
 
     for k in range(1, n_classes):
-        for j in range(n_cols):
+        for j in range(n_rows):
             for idx in range(n_samples):
                 if y_flip[idx] > 0:
-                    axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
+                    axs[j, k - 1].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
                                           marker=ms[y[idx]], s=10 * S[idx, j],
-                                          edgecolor='black', linewidth='1',
+                                          edgecolor='black', linewidth='2',
                                           linestyle='dotted')
                 else:
-                    axs[k - 1, j].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
+                    axs[j, k - 1].scatter(X[idx, 0], X[idx, 1], c=cs[y[idx]],
                                           marker=ms[y[idx]], s=10 * S[idx, j],
-                                          edgecolor='black', linewidth='1',
+                                          edgecolor='black', linewidth='2',
                                           linestyle='solid')
-            axs[k - 1, j].set_xlabel('$x_0$')
-            axs[k - 1, j].set_ylabel('$x_1$')
+            # axs[k - 1, j].set_xlabel('$x_0$')
+            # axs[k - 1, j].set_ylabel('$x_1$')
 
-            axs[k - 1, j].set_xlim(xx.min(), xx.max())
-            axs[k - 1, j].set_ylim(yy.min(), yy.max())
-            axs[k - 1, j].set_xticks(())
-            axs[k - 1, j].set_yticks(())
+            axs[j, k - 1].set_xlim(xx.min(), xx.max())
+            axs[j, k - 1].set_ylim(yy.min(), yy.max())
+            axs[j, k - 1].set_xticks(())
+            axs[j, k - 1].set_yticks(())
     # plt.show()
+    plt.tight_layout(w_pad=1.0, h_pad=1.0)
     return plt
 
 
