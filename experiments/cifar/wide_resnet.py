@@ -157,7 +157,7 @@ def WideResidualNetwork(depth=28, width=8, dropout_rate=0.0,
 
 
 def __conv1_block(input):
-    x = Conv2D(16, (3, 3), padding='same')(input)
+    x = Conv2D(16, (3, 3), padding='same', kernel_initializer='he_normal')(input)
 
     channel_axis = 1 if K.image_dim_ordering() == 'th' else -1
 
@@ -174,19 +174,21 @@ def __conv2_block(input, k=1, dropout=0.0):
     # Check if input number of filters is same as 16 * k, else create convolution2d for this input
     if K.image_dim_ordering() == 'th':
         if init._keras_shape[1] != 16 * k:
-            init = Conv2D(16 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(16 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
     else:
         if init._keras_shape[-1] != 16 * k:
-            init = Conv2D(16 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(16 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
 
-    x = Conv2D(16 * k, (3, 3), padding='same')(input)
+    x = Conv2D(16 * k, (3, 3), padding='same', kernel_initializer='he_normal')(input)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
     if dropout > 0.0:
         x = Dropout(dropout)(x)
 
-    x = Conv2D(16 * k, (3, 3), padding='same')(x)
+    x = Conv2D(16 * k, (3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
@@ -202,19 +204,21 @@ def __conv3_block(input, k=1, dropout=0.0):
     # Check if input number of filters is same as 32 * k, else create convolution2d for this input
     if K.image_dim_ordering() == 'th':
         if init._keras_shape[1] != 32 * k:
-            init = Conv2D(32 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(32 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
     else:
         if init._keras_shape[-1] != 32 * k:
-            init = Conv2D(32 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(32 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
 
-    x = Conv2D(32 * k, (3, 3), padding='same')(input)
+    x = Conv2D(32 * k, (3, 3), padding='same', kernel_initializer='he_normal')(input)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
     if dropout > 0.0:
         x = Dropout(dropout)(x)
 
-    x = Conv2D(32 * k, (3, 3), padding='same')(x)
+    x = Conv2D(32 * k, (3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
@@ -230,19 +234,21 @@ def ___conv4_block(input, k=1, dropout=0.0):
     # Check if input number of filters is same as 64 * k, else create convolution2d for this input
     if K.image_dim_ordering() == 'th':
         if init._keras_shape[1] != 64 * k:
-            init = Conv2D(64 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(64 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
     else:
         if init._keras_shape[-1] != 64 * k:
-            init = Conv2D(64 * k, (1, 1), activation='linear', padding='same')(init)
+            init = Conv2D(64 * k, (1, 1), activation='linear', padding='same',
+                    kernel_initializer='he_normal')(init)
 
-    x = Conv2D(64 * k, (3, 3), padding='same')(input)
+    x = Conv2D(64 * k, (3, 3), padding='same', kernel_initializer='he_normal')(input)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
     if dropout > 0.0:
         x = Dropout(dropout)(x)
 
-    x = Conv2D(64 * k, (3, 3), padding='same')(x)
+    x = Conv2D(64 * k, (3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
@@ -292,6 +298,6 @@ def __create_wide_residual_network(nb_classes, img_input, include_top, depth=28,
 
     if include_top:
         x = Flatten()(x)
-        x = Dense(nb_classes, activation='softmax')(x)
+        x = Dense(nb_classes, activation='softmax', kernel_initializer='he_normal')(x)
 
     return x
