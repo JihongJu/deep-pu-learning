@@ -51,3 +51,28 @@ def exponential_loss_with_probs(probs, labels):
     """Expoential loss with probabilities."""
     return tf.multiply(labels,
                        tf.subtract(labels, probs))
+
+
+def hard_bootstrapping_with_probs(probs, labels, betas):
+    """Hard Bootstrapping Loss."""
+    loss = softmax_cross_entropy_with_probs(
+        probs=probs, labels=labels)
+    y_cat = tf.argmax(labels, axis=1)
+
+    n_samples, n_classes = labels.get_shape()
+
+    y_pred = tf.argmax(probs, axis=1)
+    y_pred_enc = tf.one_hot(y_pred, n_classes, dtype=tf.float32)
+    loss_pred = softmax_cross_entropy_with_probs(
+        probs=probs, labels=y_pred_enc)
+
+    for k in range(n_classes):
+        b_k = betas[k]
+        if b_k < 1.:
+            ks = tf.scalar_mul(k, tf.ones_like(y_cat))
+            mask_k = tf.equal(y_cat, ks)
+            loss_k = tf.add(
+                tf.scalar_mul(b_k, loss),
+                tf.scalar_mul(1 - b_k, loss_pred))
+            loss = tf.where(mask_k, loss_k, loss)
+    return loss
