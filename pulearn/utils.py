@@ -128,7 +128,7 @@ def synthesize_pu_labels(Y, pct_missings=None, random_state=None,
         Y_pu[pct] = np.eye(Y.shape[1])[y]
         if verbose is True:
             print('Positive (pct_missing={}):'.format(pct),
-                  np.sum(np.argmax(Y, 1)), ' vs.', np.sum(y))
+                  np.sum(np.argmax(Y, 1)>0), ' -> ', np.sum(y>0))
     return Y_pu
 
 
