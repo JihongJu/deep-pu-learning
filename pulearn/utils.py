@@ -130,3 +130,24 @@ def synthesize_pu_labels(Y, pct_missings=None, random_state=None,
             print('Positive (pct_missing={}):'.format(pct),
                   np.sum(np.argmax(Y, 1)), ' vs.', np.sum(y))
     return Y_pu
+
+
+def synthesize_pn_labels(Y, pct_missings=None, random_state=None,
+                         verbose=False):
+    """Synthesize PN labels."""
+    # To PN
+    if pct_missings is None:
+        pct_missings = np.arange(0., 1 + 1e-8, 0.1)
+    idx = {}
+    np.random.seed(random_state)
+    n_samples = len(Y)
+    for pct in pct_missings:
+        y = np.argmax(Y, 1)
+        flip = np.random.rand(n_samples)
+        mask = flip < pct
+        y[mask] = -1
+        idx[pct] = np.where(np.invert(mask))[0]
+        if verbose is True:
+            print('Positive vs. Negative (pct={}):'.format(pct),
+                  np.sum(y > 0), ' vs.', np.sum(y == 0))
+    return idx
