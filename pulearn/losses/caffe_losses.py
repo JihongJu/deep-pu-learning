@@ -94,8 +94,8 @@ class SoftmaxWithLossLayer(caffe.Layer):
     def compute_loss(self, prob, label):
         """Return softmax loss."""
         # ignore label == ignore_label
-        ignore_mask = self.ignore_mask(label, dim=self._num_output)
-        label[ignore_mask] = 0
+        ignore_mask = self.ignore_mask(label, tiled=True)
+        label[label == self._ignore_label] = 0
         # negative logarithm of prob
         neg_log = -np.log(prob.clip(min=1e-16))
         # if loss_param has ignore_label
@@ -109,7 +109,7 @@ class SoftmaxWithLossLayer(caffe.Layer):
     def compute_diff(self, prob, label):
         """Return sofmax loss derivative."""
         # ignore label == ignore_label
-        ignore_mask = self.ignore_mask(label, dim=self._num_output)
+        ignore_mask = self.ignore_mask(label, tiled=True)
         label[label == self._ignore_label] = 0
         # compute derivative $ dldj = a_ij - y_ij$
         label_1hot = self.one_hot_encode(label, squeeze=True)
@@ -149,11 +149,11 @@ class SoftmaxWithLossLayer(caffe.Layer):
         label_1hot = np.rollaxis(label_1hot, -1, self._softmax_axis)
         return label_1hot
 
-    def ignore_mask(self, label, dim=None):
+    def ignore_mask(self, label, tiled=False):
         """Return label ignore mask."""
-        if dim:
+        if tiled is True:
             repeats = [1] * len(label.shape)
-            repeats[self._softmax_axis] = dim
+            repeats[self._softmax_axis] = self._num_output
             return np.tile(label == self._ignore_label, repeats)
         else:
             return label == self._ignore_label
@@ -195,7 +195,7 @@ class WeightedSoftmaxWithLossLayer(SoftmaxWithLossLayer):
                                  "match to n_classes.")
             class_weight = np.asarray([self.class_weight[k] for k in classes])
         class_weight = class_weight.astype('float')
-        class_weight = class_weight / np.min(class_weight)
+        # class_weight = class_weight / np.min(class_weight)
         return class_weight
 
     def _to_sample_weight(self, label, tiled=True):
@@ -211,8 +211,8 @@ class HardBootstrappingSoftmaxWithLossLayer(WeightedSoftmaxWithLossLayer):
     def compute_loss(self, prob, label):
         """Return softmax loss."""
         # ignore label == ignore_label
-        ignore_mask = self.ignore_mask(label, dim=self._num_output)
-        label[ignore_mask] = 0
+        ignore_mask = self.ignore_mask(label, tiled=True)
+        label[label == self._ignore_label] = 0
         # negative logarithm of prob
         neg_log = -np.log(prob.clip(min=1e-16))
         # if loss_param has ignore_label
@@ -229,7 +229,7 @@ class HardBootstrappingSoftmaxWithLossLayer(WeightedSoftmaxWithLossLayer):
     def compute_diff(self, prob, label):
         """Return softmax loss derivative."""
         # ignore label == ignore_label
-        ignore_mask = self.ignore_mask(label, dim=self._num_output)
+        ignore_mask = self.ignore_mask(label, tiled=True)
         label[label == self._ignore_label] = 0
         # compute diff $dldj=\beta_i (a_ij-y_ij)+(1-\beta_i)(a_ij-\hat{y_ij})$
         pred = np.argmax(prob, axis=self._softmax_axis)
