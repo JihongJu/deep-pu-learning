@@ -1,6 +1,0 @@
-[submodule "wide_resnet"]
-	path = wide_resnet
-	url = https://github.com/szagoruyko/wide-residual-networks
-[submodule "experiments/wide_resnet"]
-	path = experiments/wide_resnet
-	url = git@github.com:JihongJu/wide-residual-networks
