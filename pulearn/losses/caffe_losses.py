@@ -205,6 +205,55 @@ class WeightedSoftmaxWithLossLayer(SoftmaxWithLossLayer):
         return np.tile(sample_weight, repeats)
 
 
+class ExponentialWithLossLayer(WeightedSoftmaxWithLossLayer):
+    def setup(self, bottom, top):
+        """Parse class-dependent weight from params."""
+        super(ExponentialWithLossLayer, self).setup(bottom, top)
+        self.class_weight = self.params.get(
+            'class_weight', np.ones(self._num_output))
+        self.class_weight = self._to_class_weight(self.class_weight)
+
+    def compute_loss(self, prob, label):
+        ignore_mask = self.ignore_mask(label, tiled=True)
+        loss = super(ExponentialWithLossLayer, self).compute_loss(prob, label)
+        negmask = self.negative_mask(label, tiled=True)
+        negative_loss = np.zeros(loss.shape)
+        negative_loss[negmask] = 1 - prob[negmask]
+        negative_loss[:, 1:, ...] = 0
+        loss[negmask] = negative_loss[negmask]
+        if self._ignore_label:
+            loss[ignore_mask] = 0
+        return loss
+
+    def compute_diff(self, prob, label):
+        ignore_mask = self.ignore_mask(label, tiled=True)
+        diff = super(ExponentialWithLossLayer, self).compute_diff(prob, label)
+        negmask = self.negative_mask(label, tiled=True)
+        negative_diff = np.zeros(diff.shape)
+        # cls = 0
+        negmask_0 = negmask.copy()
+        negmask_0[:, 1:, ...] = False
+        negative_diff[negmask_0] = prob[negmask_0] * (prob[negmask_0] - 1)
+        # cls != 0
+        for cls in range(1, self._num_output):
+            negmask_1 = negmask.copy()
+            negmask_1[:, :cls, ...] = False
+            negmask_1[:, cls + 1:, ...] = False
+            negative_diff[negmask_1] = prob[negmask_0] * prob[negmask_1]
+        diff[negmask] = negative_diff[negmask]
+        if self._ignore_label:
+            diff[ignore_mask] = 0
+        return diff
+
+    def negative_mask(self, label, tiled=True):
+        if tiled is True:
+            repeats = [1] * len(label.shape)
+            repeats[self._softmax_axis] = self._num_output
+            return np.tile(label == 0, repeats)
+        else:
+            return label == 0
+
+
 class HardBootstrappingSoftmaxWithLossLayer(WeightedSoftmaxWithLossLayer):
     """A softmax loss introduce consistency Hard bootstrapping."""
 
