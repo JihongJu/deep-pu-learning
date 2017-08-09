@@ -117,23 +117,29 @@ class TestSoftmaxWithLossLayer(unittest.TestCase):
         assert np.allclose(diff, ewll_expected)
 
         # test with tf diff
-        tf_prob = np.reshape(prob, [3, 4])
-        tf_prob = np.transpose(tf_prob, [1, 0])
-        y_pred = tf.Variable(tf_prob, dtype=tf.float32)
-        tf_label = np.reshape([[1, 0, 0],
-                               [0, 1, 0],
-                               [0, 1, 0],
-                               [1, 0, 0]], [4, 3])
+        logit = np.reshape([-2., 5, 0], [1, 3, 1, 1])
+        logit -= np.max(logit, axis=1, keepdims=True)
+        score_exp = np.exp(logit)
+        prob = score_exp / np.sum(score_exp, axis=1, keepdims=True)
+        print(prob)
+        label = np.reshape([0], [1, 1, 1, 1])
+        diff = self.ewll.compute_diff(prob, label.copy())
+
+        # test with tf diff
+        tf_logit = np.reshape(logit, [3, 1])
+        tf_logit = np.transpose(tf_logit, [1, 0])
+        y_out = tf.Variable(tf_logit, dtype=tf.float32)
+        y_pred = tf.nn.softmax(y_out)
+        tf_label = np.reshape([1, 0, 0], [1, 3])
         y_true = tf.Variable(tf_label, dtype=tf.float32)
-        tf_diff_expected = [diff[0, 0, 0, 0],
-                            diff[0, 1, 0, 1], diff[0, 1, 1, 0]]
+        tf_diff_expected = np.reshape(diff, [1, 3])
         tf_loss = L.cross_entropy_and_exponential_loss(y_pred, y_true)
-        tf_diff = tf.gradients(tf_loss, [y_pred])[0]
+        tf_diff = tf.gradients(tf_loss, [y_out])[0]
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             tf_diff = tf_diff.eval()
-            print(tf_diff)
-            assert np.allclose(tf_loss[:3], tf_diff_expected)
+            print(tf_diff, diff)
+            assert np.allclose(tf_diff, tf_diff_expected)
 
     def test_negative_mask(self):
         label = np.reshape([0, 0, 1, 1], [1, 1, 2, 2])

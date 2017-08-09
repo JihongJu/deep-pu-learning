@@ -225,21 +225,21 @@ class ExponentialWithLossLayer(WeightedSoftmaxWithLossLayer):
             loss[ignore_mask] = 0
         return loss
 
-    def compute_diff(self, prob, label):
+    def compute_diff(self, logit, label):
         ignore_mask = self.ignore_mask(label, tiled=True)
-        diff = super(ExponentialWithLossLayer, self).compute_diff(prob, label)
+        diff = super(ExponentialWithLossLayer, self).compute_diff(logit, label)
         negmask = self.negative_mask(label, tiled=True)
         negative_diff = np.zeros(diff.shape)
         # cls = 0
         negmask_0 = negmask.copy()
         negmask_0[:, 1:, ...] = False
-        negative_diff[negmask_0] = prob[negmask_0] * (prob[negmask_0] - 1)
+        negative_diff[negmask_0] = logit[negmask_0] * (logit[negmask_0] - 1)
         # cls != 0
         for cls in range(1, self._num_output):
             negmask_1 = negmask.copy()
             negmask_1[:, :cls, ...] = False
             negmask_1[:, cls + 1:, ...] = False
-            negative_diff[negmask_1] = prob[negmask_0] * prob[negmask_1]
+            negative_diff[negmask_1] = logit[negmask_0] * logit[negmask_1]
         diff[negmask] = negative_diff[negmask]
         if self._ignore_label:
             diff[ignore_mask] = 0
