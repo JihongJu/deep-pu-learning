@@ -68,7 +68,7 @@ class TestSoftmaxWithLossLayer(unittest.TestCase):
         loss = self.wswll.compute_loss(prob, label.copy())
         assert np.allclose(loss, wswll_expected)
 
-        ewll_expected = np.reshape([[0.9, 0, 0, 0],
+        ewll_expected = np.reshape([[0.9 * 0.5, 0, 0, 0],
                                     [0, -np.log(0.3), -np.log(0.3), 0],
                                     [0, 0, 0, 0]], [1, 3, 2, 2])
         loss = self.ewll.compute_loss(prob, label.copy())
@@ -83,7 +83,7 @@ class TestSoftmaxWithLossLayer(unittest.TestCase):
                                [0, 1, 0],
                                [1, 0, 0]], [4, 3])
         y_true = tf.Variable(tf_label, dtype=tf.float32)
-        tf_loss_expected = [loss[0, 0, 0, 0],
+        tf_loss_expected = [loss[0, 0, 0, 0] / 0.5,
                             loss[0, 1, 0, 1], loss[0, 1, 1, 0]]
         tf_loss = L.cross_entropy_and_exponential_loss(y_pred, y_true)
         with tf.Session() as sess:
@@ -110,9 +110,9 @@ class TestSoftmaxWithLossLayer(unittest.TestCase):
         diff = self.wswll.compute_diff(prob, label.copy())
         assert np.allclose(diff, wswll_expected)
 
-        ewll_expected = np.reshape([[-0.09, 0.4, 0.4, 0.],
-                                    [0.08, -0.7, -0.7, 0.],
-                                    [0.01, 0.3, 0.3, 0.]], [1, 3, 2, 2])
+        ewll_expected = np.reshape([[-0.09 * 0.5, 0.4, 0.4, 0.],
+                                    [0.08 * 0.5, -0.7, -0.7, 0.],
+                                    [0.01 * 0.5, 0.3, 0.3, 0.]], [1, 3, 2, 2])
         diff = self.ewll.compute_diff(prob, label.copy())
         assert np.allclose(diff, ewll_expected)
 
@@ -139,7 +139,7 @@ class TestSoftmaxWithLossLayer(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             tf_diff = tf_diff.eval()
             print(tf_diff, diff)
-            assert np.allclose(tf_diff, tf_diff_expected)
+            assert np.allclose(tf_diff * 0.5, tf_diff_expected)
 
     def test_negative_mask(self):
         label = np.reshape([0, 0, 1, 1], [1, 1, 2, 2])

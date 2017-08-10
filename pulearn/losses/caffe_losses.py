@@ -220,6 +220,7 @@ class ExponentialWithLossLayer(WeightedSoftmaxWithLossLayer):
         negative_loss = np.zeros(loss.shape)
         negative_loss[negmask] = 1 - prob[negmask]
         negative_loss[:, 1:, ...] = 0
+        negative_loss = negative_loss * self.class_weight[0]
         loss[negmask] = negative_loss[negmask]
         if self._ignore_label:
             loss[ignore_mask] = 0
@@ -240,6 +241,7 @@ class ExponentialWithLossLayer(WeightedSoftmaxWithLossLayer):
             negmask_1[:, :cls, ...] = False
             negmask_1[:, cls + 1:, ...] = False
             negative_diff[negmask_1] = logit[negmask_0] * logit[negmask_1]
+        negative_diff = negative_diff * self.class_weight[0]
         diff[negmask] = negative_diff[negmask]
         if self._ignore_label:
             diff[ignore_mask] = 0
